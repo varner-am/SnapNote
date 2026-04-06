@@ -228,6 +228,16 @@ function applyTextScaleToSnapshot(snapshot: unknown, textScale: TextScale): unkn
   }
 }
 
+function snapshotHasWeeklyBuckets(snapshot: unknown) {
+  if (!snapshot || typeof snapshot !== 'object' || !('store' in snapshot)) return false
+
+  const store = (snapshot as TLStoreSnapshot).store as Record<string, unknown>
+  return Object.values(store).some((record) => {
+    const shape = record as { typeName?: string; type?: string }
+    return shape.typeName === 'shape' && shape.type === 'snappad-bucket'
+  })
+}
+
 function ToolbarIcon({ name }: { name: ToolbarIconName }) {
   const common = {
     width: 18,
@@ -365,6 +375,15 @@ export default function App() {
     document.documentElement.style.setProperty('--page-font', WRITING_FONT)
   }, [])
 
+  async function handleOpenPage(pageId: string) {
+    const freshPage = await db.pages.get(pageId)
+    if (freshPage) {
+      setPages((current) => current.map((entry) => (entry.id === pageId ? freshPage : entry)))
+    }
+    setActivePageId(pageId)
+    setView('page')
+  }
+
   async function persistPage(page: NotebookPage) {
     await db.pages.put(page)
     setPages((current) => current.map((entry) => (entry.id === page.id ? page : entry)))
@@ -416,9 +435,12 @@ export default function App() {
   }
 
   async function handleSnapshotSave(pageId: string, snapshot: unknown) {
-    const page = pagesRef.current.find((entry) => entry.id === pageId)
+    const pageIndex = pagesRef.current.findIndex((entry) => entry.id === pageId)
+    const page = pageIndex >= 0 ? pagesRef.current[pageIndex] : null
     if (!page) return
-    await persistPage({ ...page, snapshot, updatedAt: Date.now() })
+    const nextPage = { ...page, snapshot, updatedAt: Date.now() }
+    pagesRef.current = pagesRef.current.map((entry) => (entry.id === pageId ? nextPage : entry))
+    await db.pages.put(nextPage)
   }
 
   async function handleArchiveRecord(record: CompletedRecord) {
@@ -502,8 +524,7 @@ export default function App() {
               type="button"
               className={clsx('snappad-page-link', view === 'page' && activePageId === page.id && 'is-active')}
               onClick={() => {
-                setActivePageId(page.id)
-                setView('page')
+                void handleOpenPage(page.id)
               }}
             >
               <span>{page.title}</span>
@@ -1005,7 +1026,6 @@ function CanvasPageView({
         <Tldraw
           shapeUtils={shapeUtils}
           components={tldrawComponents}
-          persistenceKey={page.id}
           inferDarkMode
           onMount={(editor) => {
             editorRef.current = editor
@@ -1017,6 +1037,10 @@ function CanvasPageView({
 
             if (page.snapshot) {
               editor.loadSnapshot(page.snapshot as TLStoreSnapshot)
+              if (page.type === 'weekly' && !snapshotHasWeeklyBuckets(page.snapshot)) {
+                seedWeeklyBuckets(editor, page.weekStart ?? getWeekStartIso())
+                scheduleSave(editor)
+              }
             } else if (page.type === 'weekly') {
               seedWeeklyBuckets(editor, page.weekStart ?? getWeekStartIso())
               scheduleSave(editor)
