@@ -327,16 +327,20 @@ export default function App() {
   const [view, setView] = useState<SnapPadView>('page')
   const [isReady, setIsReady] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [storageEnabled, setStorageEnabled] = useState(true)
   const [theme, setTheme] = useState<ThemeMode>(() => {
     const stored = window.localStorage.getItem('snappad-theme')
     return stored === 'light' ? 'light' : 'dark'
   })
   const pagesRef = useRef<NotebookPage[]>([])
 
-  async function createStarterWorkspace() {
+  async function createStarterWorkspace(shouldPersist = storageEnabled) {
     const starterPages = [createWeeklyPage(), createBlankPage('Scratch space')]
-    await db.pages.bulkPut(starterPages)
+    if (shouldPersist) {
+      await db.pages.bulkPut(starterPages)
+    }
     setPages(starterPages)
+    pagesRef.current = starterPages
     setActivePageId(starterPages[0].id)
   }
 
@@ -355,6 +359,7 @@ export default function App() {
           await createStarterWorkspace()
         } else {
           setPages(storedPages)
+          pagesRef.current = storedPages
           setActivePageId(storedPages[0].id)
         }
 
@@ -362,8 +367,9 @@ export default function App() {
       } catch (error) {
         console.error('SnapPad failed to initialize IndexedDB, falling back to a fresh workspace.', error)
         setLoadError('Storage had trouble loading, so SnapPad created a fresh local workspace.')
+        setStorageEnabled(false)
         setCompleted([])
-        await createStarterWorkspace()
+        await createStarterWorkspace(false)
       }
       setIsReady(true)
     })()
@@ -383,23 +389,32 @@ export default function App() {
   }, [])
 
   async function handleOpenPage(pageId: string) {
-    const freshPage = await db.pages.get(pageId)
-    if (freshPage) {
-      setPages((current) => current.map((entry) => (entry.id === pageId ? freshPage : entry)))
+    if (storageEnabled) {
+      const freshPage = await db.pages.get(pageId)
+      if (freshPage) {
+        setPages((current) => current.map((entry) => (entry.id === pageId ? freshPage : entry)))
+        pagesRef.current = pagesRef.current.map((entry) => (entry.id === pageId ? freshPage : entry))
+      }
     }
     setActivePageId(pageId)
     setView('page')
   }
 
   async function persistPage(page: NotebookPage) {
-    await db.pages.put(page)
+    if (storageEnabled) {
+      await db.pages.put(page)
+    }
     setPages((current) => current.map((entry) => (entry.id === page.id ? page : entry)))
+    pagesRef.current = pagesRef.current.map((entry) => (entry.id === page.id ? page : entry))
   }
 
   async function handleCreatePage(type: 'blank' | 'weekly') {
     const page = type === 'weekly' ? createWeeklyPage() : createBlankPage()
-    await db.pages.put(page)
+    if (storageEnabled) {
+      await db.pages.put(page)
+    }
     setPages((current) => [...current, page])
+    pagesRef.current = [...pagesRef.current, page]
     setActivePageId(page.id)
     setView('page')
   }
@@ -447,11 +462,15 @@ export default function App() {
     if (!page) return
     const nextPage = { ...page, snapshot, updatedAt: Date.now() }
     pagesRef.current = pagesRef.current.map((entry) => (entry.id === pageId ? nextPage : entry))
-    await db.pages.put(nextPage)
+    if (storageEnabled) {
+      await db.pages.put(nextPage)
+    }
   }
 
   async function handleArchiveRecord(record: CompletedRecord) {
-    await db.completed.put(record)
+    if (storageEnabled) {
+      await db.completed.put(record)
+    }
     setCompleted((current) => [record, ...current])
   }
 
@@ -482,7 +501,9 @@ export default function App() {
     }
 
     await persistPage({ ...targetPage, snapshot: nextSnapshot, updatedAt: Date.now() })
-    await db.completed.delete(record.id)
+    if (storageEnabled) {
+      await db.completed.delete(record.id)
+    }
     setCompleted((current) => current.filter((entry) => entry.id !== record.id))
     setActivePageId(targetPage.id)
     setView('page')
@@ -564,6 +585,7 @@ export default function App() {
             onWeekShift={handleWeekShift}
             onSnapshotSave={handleSnapshotSave}
             onArchiveRecord={handleArchiveRecord}
+            persistSnapshots={storageEnabled}
           />
         )}
       </main>
@@ -579,6 +601,7 @@ interface CanvasPageViewProps {
   onWeekShift: (pageId: string, direction: -1 | 1) => Promise<void>
   onSnapshotSave: (pageId: string, snapshot: unknown) => Promise<void>
   onArchiveRecord: (record: CompletedRecord) => Promise<void>
+  persistSnapshots: boolean
 }
 
 function CanvasPageView({
@@ -589,6 +612,7 @@ function CanvasPageView({
   onWeekShift,
   onSnapshotSave,
   onArchiveRecord,
+  persistSnapshots,
 }: CanvasPageViewProps) {
   const editorRef = useRef<Editor | null>(null)
   const saveTimer = useRef<number | null>(null)
@@ -821,6 +845,7 @@ function CanvasPageView({
   }, [onArchiveRecord, page])
 
   function scheduleSave(editor: Editor) {
+    if (!persistSnapshots) return
     if (saveTimer.current) window.clearTimeout(saveTimer.current)
     saveTimer.current = window.setTimeout(() => {
       void onSnapshotSave(page.id, editor.store.getStoreSnapshot())
