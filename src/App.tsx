@@ -618,6 +618,7 @@ function CanvasPageView({
   const saveTimer = useRef<number | null>(null)
   const pointerUpCleanupRef = useRef<(() => void) | null>(null)
   const layoutRefreshTimersRef = useRef<number[]>([])
+  const weeklyRepairTimerRef = useRef<number | null>(null)
   const lastPointerRef = useRef<{ x: number; y: number } | null>(null)
   const [activeTool, setActiveTool] = useState('select')
   const [stylesOpen, setStylesOpen] = useState(false)
@@ -857,6 +858,7 @@ function CanvasPageView({
       if (saveTimer.current) window.clearTimeout(saveTimer.current)
       layoutRefreshTimersRef.current.forEach((timer) => window.clearTimeout(timer))
       layoutRefreshTimersRef.current = []
+      if (weeklyRepairTimerRef.current) window.clearTimeout(weeklyRepairTimerRef.current)
       pointerUpCleanupRef.current?.()
     },
     [],
@@ -935,6 +937,17 @@ function CanvasPageView({
     if (updates.length) {
       editor.updateShapes(updates)
     }
+  }
+
+  function ensureWeeklyBuckets(editor: Editor) {
+    if (page.type !== 'weekly') return
+
+    const shapes = (editor as any).getCurrentPageShapes?.() ?? []
+    const bucketCount = shapes.filter((shape: any) => shape.type === 'snappad-bucket').length
+    if (bucketCount > 0) return
+
+    seedWeeklyBuckets(editor, page.weekStart ?? getWeekStartIso())
+    scheduleSave(editor)
   }
 
   return (
@@ -1108,6 +1121,13 @@ function CanvasPageView({
                 refreshEditorLayout(editor)
               }, delay),
             )
+
+            if (weeklyRepairTimerRef.current) window.clearTimeout(weeklyRepairTimerRef.current)
+            if (page.type === 'weekly') {
+              weeklyRepairTimerRef.current = window.setTimeout(() => {
+                ensureWeeklyBuckets(editor)
+              }, 4800)
+            }
           }}
         />
 
