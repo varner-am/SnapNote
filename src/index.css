@@ -1,0 +1,106 @@
+:root {
+  font-family:
+    "Inter",
+    "SF Pro Display",
+    system-ui,
+    -apple-system,
+    sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color-scheme: dark;
+
+  /* Force Tldraw to use our clean system fonts */
+  --tl-font-draw: inherit;
+  --tl-font-sans: inherit;
+  --tl-font-serif: inherit;
+
+  --app-bg: #080614;
+  --sidebar-bg: rgba(14, 11, 26, 0.75);
+  --canvas-bg: #0d0a1f;
+  --panel-soft: rgba(24, 18, 44, 0.85);
+  --panel-muted: rgba(18, 14, 34, 0.65);
+  --panel-active: rgba(36, 22, 70, 0.94);
+  --floating-bg: rgba(18, 14, 32, 0.9);
+  --bucket-bg: rgba(255, 255, 255, 0.02);
+  --task-bg: rgba(22, 18, 40, 0.95);
+  --task-complete-bg: rgba(26, 22, 48, 0.8);
+  --button-bg: linear-gradient(135deg, #ff006e, #8338ec);
+  --button-hover-bg: linear-gradient(135deg, #ff4d94, #a450ff);
+  --button-secondary-bg: rgba(255, 255, 255, 0.08);
+  --button-text: #ffffff;
+  --text-primary: #fdfcff;
+  --text-secondary: #aba5d2;
+  --text-dim: #7971a8;
+  --line-soft: rgba(255, 255, 255, 0.06);
+  --line-strong: rgba(131, 56, 236, 0.4);
+  --accent-strong: #00f5d4;
+  --panel-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+  --canvas-line: rgba(255, 255, 255, 0.03);
+  --canvas-line-strong: rgba(255, 255, 255, 0.06);
+  --canvas-dot: rgba(255, 255, 255, 0.06);
+  --canvas-sheen: 0.8;
+  --note-font-size: 13px;
+  --note-line-height: 1.24;
+  --task-font-size: 13px;
+  --task-line-height: 1.22;
+  --subtask-font-size: 11px;
+  --subtask-line-height: 1.18;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --app-bg: #f5f4f9;
+  --sidebar-bg: rgba(255, 255, 255, 0.85);
+  --canvas-bg: #fcfbfe;
+  --panel-soft: rgba(255, 255, 255, 0.9);
+  --panel-muted: rgba(246, 245, 250, 0.8);
+  --panel-active: rgba(240, 237, 248, 0.95);
+  --floating-bg: rgba(255, 255, 255, 0.95);
+  --bucket-bg: rgba(0, 0, 0, 0.02);
+  --task-bg: rgba(255, 255, 255, 0.98);
+  --task-complete-bg: rgba(248, 247, 252, 0.9);
+  --button-bg: linear-gradient(135deg, #ff006e, #8338ec);
+  --button-hover-bg: linear-gradient(135deg, #ff4099, #a352ec);
+  --button-secondary-bg: rgba(0, 0, 0, 0.04);
+  --button-text: #ffffff;
+  --text-primary: #181524;
+  --text-secondary: #57526d;
+  --text-dim: #9a94b4;
+  --line-soft: rgba(0, 0, 0, 0.06);
+  --line-strong: rgba(131, 56, 236, 0.25);
+  --accent-strong: #8338ec;
+  --panel-shadow: 0 24px 60px rgba(0, 0, 0, 0.06);
+  --canvas-line: rgba(0, 0, 0, 0.03);
+  --canvas-line-strong: rgba(0, 0, 0, 0.06);
+  --canvas-dot: rgba(0, 0, 0, 0.06);
+  --canvas-sheen: 0.15;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  background: var(--app-bg);
+  color: var(--text-primary);
+  overflow: hidden;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
