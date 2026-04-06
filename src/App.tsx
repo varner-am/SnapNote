@@ -616,6 +616,7 @@ function CanvasPageView({
   const editorRef = useRef<Editor | null>(null)
   const saveTimer = useRef<number | null>(null)
   const pointerUpCleanupRef = useRef<(() => void) | null>(null)
+  const postMountZoomTimerRef = useRef<number | null>(null)
   const lastPointerRef = useRef<{ x: number; y: number } | null>(null)
   const [debugStats, setDebugStats] = useState({
     shapes: 0,
@@ -623,6 +624,7 @@ function CanvasPageView({
     tasks: 0,
     notes: 0,
     tool: 'select',
+    zoom: 1,
   })
   const [runtimeIssue, setRuntimeIssue] = useState<string | null>(null)
   const [activeTool, setActiveTool] = useState('select')
@@ -854,6 +856,7 @@ function CanvasPageView({
   useEffect(
     () => () => {
       if (saveTimer.current) window.clearTimeout(saveTimer.current)
+      if (postMountZoomTimerRef.current) window.clearTimeout(postMountZoomTimerRef.current)
       pointerUpCleanupRef.current?.()
     },
     [],
@@ -957,13 +960,22 @@ function CanvasPageView({
 
   function updateDebugStats(editor: Editor) {
     const shapes = ((editor as any).getCurrentPageShapes?.() ?? []) as Array<{ type: string }>
+    const zoom = (editor as any).getZoomLevel?.() ?? 1
     setDebugStats({
       shapes: shapes.length,
       buckets: shapes.filter((shape) => shape.type === 'snappad-bucket').length,
       tasks: shapes.filter((shape) => shape.type === 'snappad-task').length,
       notes: shapes.filter((shape) => shape.type === 'snappad-note').length,
       tool: editor.getCurrentToolId?.() ?? 'unknown',
+      zoom: Number(zoom.toFixed?.(2) ?? zoom),
     })
+  }
+
+  function resetView() {
+    const editor = editorRef.current
+    if (!editor) return
+    editor.zoomToFit({ animation: { duration: 0 } })
+    updateDebugStats(editor)
   }
 
   return (
@@ -986,6 +998,9 @@ function CanvasPageView({
           <div className="snappad-page__quick-actions">
             <button type="button" onClick={() => createShape('task')}>
               Add task
+            </button>
+            <button type="button" onClick={resetView}>
+              Reset view
             </button>
           </div>
 
@@ -1134,6 +1149,12 @@ function CanvasPageView({
               window.removeEventListener('pointerup', handlePointerUp)
             }
 
+            if (postMountZoomTimerRef.current) window.clearTimeout(postMountZoomTimerRef.current)
+            postMountZoomTimerRef.current = window.setTimeout(() => {
+              editor.zoomToFit({ animation: { duration: 0 } })
+              updateDebugStats(editor)
+            }, 5200)
+
           }}
         />
 
@@ -1267,6 +1288,7 @@ function CanvasPageView({
         <span>{`buckets ${debugStats.buckets}`}</span>
         <span>{`notes ${debugStats.notes}`}</span>
         <span>{`tasks ${debugStats.tasks}`}</span>
+        <span>{`zoom ${debugStats.zoom}`}</span>
         <span>{persistSnapshots ? 'persist on' : 'persist off'}</span>
         <span>{runtimeIssue ? `error ${runtimeIssue}` : 'error none'}</span>
       </div>
