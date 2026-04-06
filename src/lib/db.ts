@@ -6,7 +6,7 @@ class SnapPadDatabase extends Dexie {
   completed!: Table<CompletedRecord, string>
 
   constructor() {
-    super('snappad-db')
+    super('snappad-db-v2')
     this.version(1).stores({
       pages: 'id, updatedAt, type',
       completed: 'id, archivedAt, originalPageId',
