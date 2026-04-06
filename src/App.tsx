@@ -620,6 +620,13 @@ function CanvasPageView({
   const layoutRefreshTimersRef = useRef<number[]>([])
   const weeklyRepairTimerRef = useRef<number | null>(null)
   const lastPointerRef = useRef<{ x: number; y: number } | null>(null)
+  const [debugStats, setDebugStats] = useState({
+    shapes: 0,
+    buckets: 0,
+    tasks: 0,
+    notes: 0,
+    tool: 'select',
+  })
   const [activeTool, setActiveTool] = useState('select')
   const [stylesOpen, setStylesOpen] = useState(false)
   const [activeColor, setActiveColor] = useState<(typeof TOOLBAR_COLORS)[number]>('black')
@@ -950,6 +957,17 @@ function CanvasPageView({
     scheduleSave(editor)
   }
 
+  function updateDebugStats(editor: Editor) {
+    const shapes = ((editor as any).getCurrentPageShapes?.() ?? []) as Array<{ type: string }>
+    setDebugStats({
+      shapes: shapes.length,
+      buckets: shapes.filter((shape) => shape.type === 'snappad-bucket').length,
+      tasks: shapes.filter((shape) => shape.type === 'snappad-task').length,
+      notes: shapes.filter((shape) => shape.type === 'snappad-note').length,
+      tool: editor.getCurrentToolId?.() ?? 'unknown',
+    })
+  }
+
   return (
     <section className="snappad-page">
       <header className="snappad-page__header">
@@ -1098,7 +1116,10 @@ function CanvasPageView({
               editor.zoomToFit({ animation: { duration: 0 } })
             }
 
+            updateDebugStats(editor)
+
             editor.store.listen(() => scheduleSave(editor), { source: 'user', scope: 'document' })
+            editor.store.listen(() => updateDebugStats(editor), { scope: 'document' })
 
             const handlePointerUp = (event: PointerEvent) => {
               if (!editorRef.current) return
@@ -1243,6 +1264,15 @@ function CanvasPageView({
               ) : null}
             </div>
           </div>
+        </div>
+
+        <div className="snappad-debug-panel">
+          <span>{`tool ${debugStats.tool}`}</span>
+          <span>{`shapes ${debugStats.shapes}`}</span>
+          <span>{`buckets ${debugStats.buckets}`}</span>
+          <span>{`notes ${debugStats.notes}`}</span>
+          <span>{`tasks ${debugStats.tasks}`}</span>
+          <span>{persistSnapshots ? 'persist on' : 'persist off'}</span>
         </div>
       </div>
     </section>
