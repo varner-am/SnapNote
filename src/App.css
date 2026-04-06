@@ -494,41 +494,6 @@
   font-size: 0.82rem;
 }
 
-.tlui-layout__bottom {
-  padding-bottom: 24px;
-}
-
-.tlui-layout__bottom__main {
-  margin-bottom: 8px;
-}
-
-.snappad-canvas-wrap .tl-container,
-.snappad-canvas-wrap .tlui-layout {
-  height: 100% !important;
-  max-height: 100% !important;
-}
-
-.snappad-canvas-wrap .tlui-layout {
-  position: absolute;
-  inset: 0;
-}
-
-.snappad-canvas-wrap .tlui-layout__top {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 2;
-}
-
-.snappad-canvas-wrap .tlui-layout__bottom {
-  display: none;
-}
-
-.snappad-canvas-wrap .tlui-main-toolbar--horizontal {
-  padding-bottom: 0;
-}
-
 .snappad-canvas-toolbar {
   position: fixed;
   left: calc(var(--sidebar-width) + ((100vw - var(--sidebar-width)) / 2));
