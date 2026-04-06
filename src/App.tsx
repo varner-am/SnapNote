@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { format } from 'date-fns'
 import clsx from 'clsx'
 import {
-  Box,
   DefaultColorStyle,
   DefaultFontStyle,
   DefaultSizeStyle,
@@ -617,8 +616,6 @@ function CanvasPageView({
   const editorRef = useRef<Editor | null>(null)
   const saveTimer = useRef<number | null>(null)
   const pointerUpCleanupRef = useRef<(() => void) | null>(null)
-  const layoutObserverCleanupRef = useRef<(() => void) | null>(null)
-  const layoutRefreshTimersRef = useRef<number[]>([])
   const lastPointerRef = useRef<{ x: number; y: number } | null>(null)
   const [debugStats, setDebugStats] = useState({
     shapes: 0,
@@ -633,13 +630,6 @@ function CanvasPageView({
   const [activeColor, setActiveColor] = useState<(typeof TOOLBAR_COLORS)[number]>('black')
   const [activeSize, setActiveSize] = useState<(typeof TOOLBAR_SIZES)[number]['id']>('m')
   const textMetrics = TEXT_SCALE_METRICS[page.textScale ?? 'medium']
-
-  function refreshEditorLayout(editor: Editor) {
-    const container = editor.getContainer()
-    const bounds = container.getBoundingClientRect()
-    editor.updateViewportScreenBounds(new Box(bounds.left, bounds.top, bounds.width, bounds.height))
-    window.dispatchEvent(new Event('resize'))
-  }
 
   function createShape(kind: 'note' | 'task', point?: { x: number; y: number }) {
     const editor = editorRef.current as any
@@ -864,9 +854,6 @@ function CanvasPageView({
   useEffect(
     () => () => {
       if (saveTimer.current) window.clearTimeout(saveTimer.current)
-      layoutRefreshTimersRef.current.forEach((timer) => window.clearTimeout(timer))
-      layoutRefreshTimersRef.current = []
-      layoutObserverCleanupRef.current?.()
       pointerUpCleanupRef.current?.()
     },
     [],
@@ -1108,7 +1095,6 @@ function CanvasPageView({
             editor.setStyleForNextShapes(DefaultColorStyle as never, activeColor as never)
             setActiveTool(editor.getCurrentToolId())
             pointerUpCleanupRef.current?.()
-            layoutObserverCleanupRef.current?.()
 
             if (page.snapshot) {
               if (page.type === 'weekly') {
@@ -1146,22 +1132,6 @@ function CanvasPageView({
             window.addEventListener('pointerup', handlePointerUp)
             pointerUpCleanupRef.current = () => {
               window.removeEventListener('pointerup', handlePointerUp)
-            }
-
-            layoutRefreshTimersRef.current.forEach((timer) => window.clearTimeout(timer))
-            layoutRefreshTimersRef.current = [0, 80, 220, 1200, 5000].map((delay) =>
-              window.setTimeout(() => {
-                refreshEditorLayout(editor)
-              }, delay),
-            )
-
-            const container = editor.getContainer()
-            const resizeObserver = new ResizeObserver(() => {
-              refreshEditorLayout(editor)
-            })
-            resizeObserver.observe(container)
-            layoutObserverCleanupRef.current = () => {
-              resizeObserver.disconnect()
             }
 
           }}
