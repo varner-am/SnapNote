@@ -966,17 +966,6 @@ function CanvasPageView({
     }
   }
 
-  function ensureWeeklyBuckets(editor: Editor) {
-    if (page.type !== 'weekly') return
-
-    const shapes = (editor as any).getCurrentPageShapes?.() ?? []
-    const bucketCount = shapes.filter((shape: any) => shape.type === 'snappad-bucket').length
-    if (bucketCount > 0) return
-
-    seedWeeklyBuckets(editor, page.weekStart ?? getWeekStartIso())
-    scheduleSave(editor)
-  }
-
   function updateDebugStats(editor: Editor) {
     const shapes = ((editor as any).getCurrentPageShapes?.() ?? []) as Array<{ type: string }>
     setDebugStats({
