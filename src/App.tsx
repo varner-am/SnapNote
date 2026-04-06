@@ -617,6 +617,7 @@ function CanvasPageView({
   const editorRef = useRef<Editor | null>(null)
   const saveTimer = useRef<number | null>(null)
   const pointerUpCleanupRef = useRef<(() => void) | null>(null)
+  const layoutObserverCleanupRef = useRef<(() => void) | null>(null)
   const layoutRefreshTimersRef = useRef<number[]>([])
   const lastPointerRef = useRef<{ x: number; y: number } | null>(null)
   const [debugStats, setDebugStats] = useState({
@@ -865,6 +866,7 @@ function CanvasPageView({
       if (saveTimer.current) window.clearTimeout(saveTimer.current)
       layoutRefreshTimersRef.current.forEach((timer) => window.clearTimeout(timer))
       layoutRefreshTimersRef.current = []
+      layoutObserverCleanupRef.current?.()
       pointerUpCleanupRef.current?.()
     },
     [],
@@ -1106,6 +1108,7 @@ function CanvasPageView({
             editor.setStyleForNextShapes(DefaultColorStyle as never, activeColor as never)
             setActiveTool(editor.getCurrentToolId())
             pointerUpCleanupRef.current?.()
+            layoutObserverCleanupRef.current?.()
 
             if (page.snapshot) {
               if (page.type === 'weekly') {
@@ -1146,11 +1149,20 @@ function CanvasPageView({
             }
 
             layoutRefreshTimersRef.current.forEach((timer) => window.clearTimeout(timer))
-            layoutRefreshTimersRef.current = [0, 80, 220].map((delay) =>
+            layoutRefreshTimersRef.current = [0, 80, 220, 1200, 5000].map((delay) =>
               window.setTimeout(() => {
                 refreshEditorLayout(editor)
               }, delay),
             )
+
+            const container = editor.getContainer()
+            const resizeObserver = new ResizeObserver(() => {
+              refreshEditorLayout(editor)
+            })
+            resizeObserver.observe(container)
+            layoutObserverCleanupRef.current = () => {
+              resizeObserver.disconnect()
+            }
 
           }}
         />
