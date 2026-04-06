@@ -618,7 +618,6 @@ function CanvasPageView({
   const saveTimer = useRef<number | null>(null)
   const pointerUpCleanupRef = useRef<(() => void) | null>(null)
   const layoutRefreshTimersRef = useRef<number[]>([])
-  const weeklyRepairTimerRef = useRef<number | null>(null)
   const lastPointerRef = useRef<{ x: number; y: number } | null>(null)
   const [debugStats, setDebugStats] = useState({
     shapes: 0,
@@ -627,6 +626,7 @@ function CanvasPageView({
     notes: 0,
     tool: 'select',
   })
+  const [runtimeIssue, setRuntimeIssue] = useState<string | null>(null)
   const [activeTool, setActiveTool] = useState('select')
   const [stylesOpen, setStylesOpen] = useState(false)
   const [activeColor, setActiveColor] = useState<(typeof TOOLBAR_COLORS)[number]>('black')
@@ -865,11 +865,31 @@ function CanvasPageView({
       if (saveTimer.current) window.clearTimeout(saveTimer.current)
       layoutRefreshTimersRef.current.forEach((timer) => window.clearTimeout(timer))
       layoutRefreshTimersRef.current = []
-      if (weeklyRepairTimerRef.current) window.clearTimeout(weeklyRepairTimerRef.current)
       pointerUpCleanupRef.current?.()
     },
     [],
   )
+
+  useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      setRuntimeIssue(event.message || 'Unknown runtime error')
+    }
+
+    const handleRejection = (event: PromiseRejectionEvent) => {
+      const reason =
+        typeof event.reason === 'string'
+          ? event.reason
+          : event.reason?.message || 'Unhandled promise rejection'
+      setRuntimeIssue(reason)
+    }
+
+    window.addEventListener('error', handleError)
+    window.addEventListener('unhandledrejection', handleRejection)
+    return () => {
+      window.removeEventListener('error', handleError)
+      window.removeEventListener('unhandledrejection', handleRejection)
+    }
+  }, [])
 
   useEffect(() => {
     const editor = editorRef.current as any
@@ -1143,12 +1163,6 @@ function CanvasPageView({
               }, delay),
             )
 
-            if (weeklyRepairTimerRef.current) window.clearTimeout(weeklyRepairTimerRef.current)
-            if (page.type === 'weekly') {
-              weeklyRepairTimerRef.current = window.setTimeout(() => {
-                ensureWeeklyBuckets(editor)
-              }, 4800)
-            }
           }}
         />
 
@@ -1274,6 +1288,16 @@ function CanvasPageView({
           <span>{`tasks ${debugStats.tasks}`}</span>
           <span>{persistSnapshots ? 'persist on' : 'persist off'}</span>
         </div>
+      </div>
+
+      <div className="snappad-debug-banner">
+        <span>{`tool ${debugStats.tool}`}</span>
+        <span>{`shapes ${debugStats.shapes}`}</span>
+        <span>{`buckets ${debugStats.buckets}`}</span>
+        <span>{`notes ${debugStats.notes}`}</span>
+        <span>{`tasks ${debugStats.tasks}`}</span>
+        <span>{persistSnapshots ? 'persist on' : 'persist off'}</span>
+        <span>{runtimeIssue ? `error ${runtimeIssue}` : 'error none'}</span>
       </div>
     </section>
   )
