@@ -228,14 +228,21 @@ function applyTextScaleToSnapshot(snapshot: unknown, textScale: TextScale): unkn
   }
 }
 
-function snapshotHasWeeklyBuckets(snapshot: unknown) {
-  if (!snapshot || typeof snapshot !== 'object' || !('store' in snapshot)) return false
+function normalizeWeeklySnapshot(snapshot: unknown): TLStoreSnapshot | null {
+  if (!snapshot || typeof snapshot !== 'object' || !('store' in snapshot)) return null
 
-  const store = (snapshot as TLStoreSnapshot).store as Record<string, unknown>
-  return Object.values(store).some((record) => {
-    const shape = record as { typeName?: string; type?: string }
-    return shape.typeName === 'shape' && shape.type === 'snappad-bucket'
-  })
+  const typedSnapshot = snapshot as TLStoreSnapshot
+  const nextStore = Object.fromEntries(
+    Object.entries(typedSnapshot.store as Record<string, unknown>).filter(([, record]) => {
+      const shape = record as { typeName?: string; type?: string }
+      return !(shape.typeName === 'shape' && shape.type === 'snappad-bucket')
+    }),
+  ) as TLStoreSnapshot['store']
+
+  return {
+    ...typedSnapshot,
+    store: nextStore,
+  }
 }
 
 function ToolbarIcon({ name }: { name: ToolbarIconName }) {
@@ -1036,10 +1043,15 @@ function CanvasPageView({
             pointerUpCleanupRef.current?.()
 
             if (page.snapshot) {
-              editor.loadSnapshot(page.snapshot as TLStoreSnapshot)
-              if (page.type === 'weekly' && !snapshotHasWeeklyBuckets(page.snapshot)) {
+              if (page.type === 'weekly') {
+                const normalizedSnapshot = normalizeWeeklySnapshot(page.snapshot)
+                if (normalizedSnapshot) {
+                  editor.loadSnapshot(normalizedSnapshot)
+                }
                 seedWeeklyBuckets(editor, page.weekStart ?? getWeekStartIso())
                 scheduleSave(editor)
+              } else {
+                editor.loadSnapshot(page.snapshot as TLStoreSnapshot)
               }
             } else if (page.type === 'weekly') {
               seedWeeklyBuckets(editor, page.weekStart ?? getWeekStartIso())
