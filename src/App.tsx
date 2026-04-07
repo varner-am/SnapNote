@@ -1101,7 +1101,7 @@ function CanvasPageView({
       >
         <Tldraw
           shapeUtils={shapeUtils}
-          components={tldrawComponents}
+          hideUi
           inferDarkMode
           onMount={(editor) => {
             editorRef.current = editor
