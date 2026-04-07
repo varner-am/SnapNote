@@ -1,16 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { format } from 'date-fns'
 import clsx from 'clsx'
-import {
-  DefaultColorStyle,
-  DefaultFontStyle,
-  DefaultSizeStyle,
-  Tldraw,
-  createShapeId,
-  type Editor,
-  type TLStoreSnapshot,
-  type TLUiComponents,
-} from 'tldraw'
+import { DefaultColorStyle, DefaultFontStyle, DefaultSizeStyle, Tldraw, createShapeId, type Editor, type TLStoreSnapshot } from 'tldraw'
 import { db } from './lib/db'
 import { queueShapeFocus, queueSubtaskFocus, registerShapeCallbacks } from './lib/shapeCallbacks'
 import { archiveTaskRecord, restoreShapeForPage } from './lib/taskLifecycle'
@@ -23,13 +14,6 @@ import './App.css'
 
 const shapeUtils = [BucketShapeUtil, NoteShapeUtil, TaskShapeUtil]
 type ThemeMode = 'dark' | 'light'
-
-const tldrawComponents: TLUiComponents = {
-  Toolbar: null,
-  HelpMenu: null,
-  NavigationPanel: null,
-  StylePanel: null,
-}
 
 const BACKGROUNDS: Array<{ id: BackgroundPreset; label: string }> = [
   { id: 'plain', label: 'Plain' },
